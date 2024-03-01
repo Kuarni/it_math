@@ -275,6 +275,9 @@ int main(int argc, const char **argv) {
 
     fill_u_matrix(u_matrix, &params);
 
+    double t1, t2;
+    t1 = omp_get_wtime();
+
     int iterations;
     switch (params.algo) {
         case Sequential:
@@ -298,7 +301,9 @@ int main(int argc, const char **argv) {
         rc = iterations;
         goto clean;
     } else {
+        t2 = omp_get_wtime();
         printf("iterations: %d\n", iterations);
+        printf("time: %f\n", t2-t1);
     }
 
     rc = print_results(u_matrix, &params);
