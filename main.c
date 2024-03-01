@@ -4,16 +4,12 @@
 #include <math.h>
 #include <omp.h>
 #include <inttypes.h>
-#include <minmax.h>
+#include "argparse.h"
 
 #define OUTPUT_FILE "./result.txt"
 #define error(...) fprintf(stderr, __VA_ARGS__)
 
-#define N 100
-#define EPSILON 0.0001
-#define SEED 0xEBAC0C
-
-#define CHUNK_SIZE 51
+#define min(a, b) a < b ? a : b
 
 double randfrom(double min, double max) {
     double range = (max - min);
@@ -22,34 +18,74 @@ double randfrom(double min, double max) {
 }
 
 enum algo {
-    sequential = 1,
-    parallel_string = 3,
-    wave_chunk = 6
+    Sequential = 1,
+    ParallelString = 3,
+    WaveChunk = 6
 };
 
 typedef struct {
-    double epsilon;
-    double h;
+    //size of side of the f function matrix
     uint32_t n;
+    //size of side of WaveChunk algo's chunk
     uint32_t chunk_size;
-    enum algo;
-    int seed;
-};
+    double epsilon;
+    //interval between values
+    double h;
+    struct borders {
+        double left;
+        double right;
+    } borders;
+    enum algo algo;
+    int random_seed;
+    int random_max;
+    int random_min;
+} params_t;
 
-int parse_args(int argc, char **argv) {
+params_t parse_args(int argc, const char **argv) {
+    params_t params = {100, 51, 0.0001, 0, {0, 1}, 6, 0xEBAC0C, 100, -100};
+    int algo = -1;
 
-    for (int i = 0; i < argc; i ++) {
+    const char *const usage[] = {
+            "poisson [options]",
+            NULL,
+    };
 
+    struct argparse_option options[] = {
+            OPT_HELP(),
+            OPT_GROUP("Basic options"),
+            OPT_INTEGER('n', "size", &params.n, "size of side of the f function matrix"),
+            OPT_INTEGER('c', "chunk_size", &params.chunk_size, "size of side of WaveChunk algo's chunk"),
+            OPT_FLOAT('e', "epsilon", &params.epsilon, "accuracy of calculations"),
+            OPT_FLOAT('l', "left_border", &params.borders.left, "left border"),
+            OPT_FLOAT('r', "right_border", &params.borders.right, "right border"),
+            OPT_INTEGER('a', "algo", &algo, "algorithm: 1-Sequential; 3-Parallel String; 6-Wave Chunk"),
+            OPT_INTEGER('s', "seed", &params.random_seed, "random seed"),
+            OPT_INTEGER('\0', "max", &algo, "random max"),
+            OPT_INTEGER('\0', "min", &algo, "random min"),
+            OPT_END()
+    };
+
+
+    struct argparse argparse;
+    argparse_init(&argparse, options, usage, 0);
+    argparse_describe(&argparse, "\nIt works and I'm so tired to write more\n", "");
+    argparse_parse(&argparse, argc, argv);
+
+    if (algo >= 0) {
+        params.algo = algo;
     }
+    params.h = fabs(params.borders.right - params.borders.left) / (params.n + 1);
+
+    return params;
 }
 
-int allocate_empty_matrix(double ***new_matrix) {
-    double **matrix = calloc(N + 2, sizeof(double *));
+int allocate_empty_matrix(double ***new_matrix, const params_t *params) {
+    double **matrix = calloc(params->n + 2, sizeof(double *));
     if (!matrix)
         return -ENOMEM;
 
-    for (int i = 0; i < N + 2; i++) {
-        matrix[i] = calloc(N + 2, sizeof(double));
+    for (int i = 0; i < params->n + 2; i++) {
+        matrix[i] = calloc(params->n + 2, sizeof(double));
         if (!matrix[i])
             return -ENOMEM;
     }
@@ -57,33 +93,32 @@ int allocate_empty_matrix(double ***new_matrix) {
     return 0;
 }
 
-void fill_u_matrix(double **matrix) {
-    for (int i = 0; i < N + 2; i++)
-        for (int j = 0; j < N + 2; j++) {
-            double x = i / (double) (N + 1);
-            double y = j / (double) (N + 1);
+void fill_u_matrix(double **matrix, const params_t *params) {
+    for (int i = 0; i < params->n + 2; i++)
+        for (int j = 0; j < params->n + 2; j++) {
+            double x =  params->borders.left + (i / (double) (params->n + 1));
+            double y = params->borders.left + (j / (double) (params->n + 1));
             double new_val = 0;
-            if (y == 0)
+            if (y == params->borders.left)
                 new_val = 100 - 200 * x;
-            else if (x == 0)
+            else if (x == params->borders.left)
                 new_val = 100 - 200 * y;
-            else if (y == 1)
+            else if (y == params->borders.right)
                 new_val = -100 + 200 * x;
-            else if (x == 1)
+            else if (x == params->borders.right)
                 new_val = -100 + 200 * y;
-            else new_val = randfrom(-100, 100);
+            else new_val = randfrom(params->random_min, params->random_max);
             matrix[i][j] = new_val;
         }
 }
 
-int sequential_poisson(double **u, double **f) {
+int sequential_poisson(double **u, double **f, const params_t *params) {
     int iterations = 0;
-    const double h = 1 / (N + 1);
-    double dmax, temp, dm;
+    double dmax, temp, dm, h = params->h;
     do {
         dmax = 0;
-        for (int i = 1; i < N + 1; i++)
-            for (int j = 1; j < N + 1; j++) {
+        for (int i = 1; i < params->n + 1; i++)
+            for (int j = 1; j < params->n + 1; j++) {
                 temp = u[i][j];
                 u[i][j] = 0.25 * (u[i - 1][j] + u[i + 1][j] + u[i][j - 1] + u[i][j + 1] - h * h * f[i][j]);
                 dm = fabs(temp - u[i][j]);
@@ -91,23 +126,22 @@ int sequential_poisson(double **u, double **f) {
                     dmax = dm;
             }
         iterations += 1;
-    } while (dmax > EPSILON);
+    } while (dmax > params->epsilon);
     return iterations;
 }
 
-int parallel_string_poisson(double **u, double **f) { //11.3
+int parallel_string_poisson(double **u, double **f, const params_t *params) { //11.3
     omp_lock_t dmax_lock;
     omp_init_lock(&dmax_lock);
     int iterations = 0;
-    const double h = 1 / (N + 1);
     int i, j;
-    double dmax, temp, dm, d;
+    double dmax, temp, dm, d, h = params->h;
     do {
         dmax = 0;
 #pragma omp parallel for shared(u, dmax) private(i, j, temp, d, dm)
-        for (i = 1; i < N + 1; i++) {
+        for (i = 1; i < params->n + 1; i++) {
             dm = 0;
-            for (j = 1; j < N + 1; j++) {
+            for (j = 1; j < params->n + 1; j++) {
                 temp = u[i][j];
                 u[i][j] = 0.25 * (u[i - 1][j] + u[i + 1][j] + u[i][j - 1] + u[i][j + 1] - h * h * f[i][j]);
                 d = fabs(temp - u[i][j]);
@@ -119,24 +153,23 @@ int parallel_string_poisson(double **u, double **f) { //11.3
             omp_unset_lock(&dmax_lock);
         }
         iterations += 1;
-    } while (dmax > EPSILON);
+    } while (dmax > params->epsilon);
     return iterations;
 }
 
 typedef struct {
-    int x;
-    int y;
+    uint32_t x;
+    uint32_t y;
 } chunk_t;
 
-double process_chunk(double **u, double **f, chunk_t chunk) {
-    const double h = 1 / (N + 1);
-    double dmax, temp, dm;
+double process_chunk(double **u, double **f, chunk_t chunk, const params_t *params) {
+    double dmax, temp, dm, h = params->h;
     dmax = 0;
-    for (int i = chunk.x * CHUNK_SIZE; i < (chunk.x + 1) * CHUNK_SIZE; i++) {
-        if (i == 0 || i == N + 1)
+    for (uint32_t i = chunk.x * params->chunk_size; i < (chunk.x + 1) * params->chunk_size; i++) {
+        if (i == 0 || i == params->n + 1)
             continue;
-        for (int j = chunk.y * CHUNK_SIZE; j < (chunk.y + 1) * CHUNK_SIZE; j++) {
-            if (j == 0 || j == N + 1)
+        for (uint32_t j = chunk.y * params->chunk_size; j < (chunk.y + 1) * params->chunk_size; j++) {
+            if (j == 0 || j == params->n + 1)
                 continue;
             temp = u[i][j];
             u[i][j] = 0.25 * (u[i - 1][j] + u[i + 1][j] + u[i][j - 1] + u[i][j + 1] - h * h * f[i][j]);
@@ -148,38 +181,38 @@ double process_chunk(double **u, double **f, chunk_t chunk) {
     return dmax;
 }
 
-int wave_chunk_poisson(double **u, double **f) { //11.6
-    if ((N + 2) % CHUNK_SIZE) {
-        error("Invalid chunk_t size/n");
+int wave_chunk_poisson(double **u, double **f, const params_t *params) { //11.6
+    if ((params->n + 2) % params->chunk_size) {
+        error("Invalid chunk size: %d\n", params->chunk_size);
         return -EINVAL;
     }
-#define NB (N+2) / CHUNK_SIZE
+    const uint32_t nb = (params->n + 2) / params->chunk_size;
     omp_lock_t dmax_lock;
     omp_init_lock(&dmax_lock);
-    int nx, i, j, iterations = 0;
-    double d, dmax, dm[NB];
-    int dmax_chunk = min(100, NB);
+    uint32_t nx, i, j, iterations = 0;
+    double d, dmax, dm[nb];
+    int dmax_chunk = min(100, nb);
     do {
         dmax = 0;
-        for (nx = 0; nx < NB; nx++) {
+        for (nx = 0; nx < nb; nx++) {
             dm[nx] = 0;
 #pragma omp parallel for shared(nx) private(i, j)
             for (i = 0; i < nx + 1; i++) {
                 j = nx - i;
-                d = process_chunk(u, f, (chunk_t) {i, j});
+                d = process_chunk(u, f, (chunk_t) {i, j}, params);
                 if (dm[i] < d) dm[i] = d;
             }
         }
-        for (nx = NB - 1; nx > 0; nx--) {
+        for (nx = nb - 1; nx > 0; nx--) {
 #pragma omp parallel for shared(nx) private(i, j)
-            for (i = NB-nx; i < NB; i++) {
-                j = 2 * (NB - 1) - nx - i + 1;
-                d = process_chunk(u, f, (chunk_t) {i, j});
+            for (i = nb - nx; i < nb; i++) {
+                j = 2 * (nb - 1) - nx - i + 1;
+                d = process_chunk(u, f, (chunk_t) {i, j}, params);
                 if (dm[i] < d) dm[i] = d;
             }
         }
 #pragma omp parallel for shared(n, dm, dmax) private(i, d)
-        for (i = 0; i < NB; i += dmax_chunk) {
+        for (i = 0; i < nb; i += dmax_chunk) {
             d = 0;
             for (j = i; j < i + dmax_chunk; j++)
                 if (d < dm[j]) d = dm[j];
@@ -188,11 +221,11 @@ int wave_chunk_poisson(double **u, double **f) { //11.6
             omp_unset_lock(&dmax_lock);
         }
         iterations++;
-    } while (dmax > EPSILON);
-    return iterations;
+    } while (dmax > params->epsilon);
+    return (int) iterations;
 }
 
-int print_results(double **matrix) {
+int print_results(double **matrix, const params_t *params) {
     int rc = 0;
     FILE *output_file = fopen(OUTPUT_FILE, "w");
     if (!output_file) {
@@ -200,8 +233,8 @@ int print_results(double **matrix) {
         return -EIO;
     }
 
-    for (int i = 0; i < N + 2; i++) {
-        for (int j = 0; j < N + 2; j++) {
+    for (int i = 0; i < params->n + 2; i++) {
+        for (int j = 0; j < params->n + 2; j++) {
             if (fprintf(output_file, "%.2f ", matrix[i][j]) <= 0) {
                 rc = -EIO;
                 goto close;
@@ -217,45 +250,61 @@ int print_results(double **matrix) {
     return rc;
 }
 
-void free_matrix(double **matrix) {
-    for (int i = 0; i < N + 2; i++)
+void free_matrix(double **matrix, const params_t *params) {
+    for (int i = 0; i < params->n + 2; i++)
         free(matrix[i]);
     free(matrix);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
+    const params_t params = parse_args(argc, argv);
     double **f_matrix = NULL;
     double **u_matrix = NULL;
     int rc = 0;
-    srand(SEED);
+    srand(params.random_seed);
 
-    if (allocate_empty_matrix(&f_matrix)) {
+    if (allocate_empty_matrix(&f_matrix, &params)) {
         rc = -ENOMEM;
         goto clean;
     }
 
-    if (allocate_empty_matrix(&u_matrix)) {
+    if (allocate_empty_matrix(&u_matrix, &params)) {
         rc = -ENOMEM;
         goto clean;
     }
 
-    fill_u_matrix(u_matrix);
+    fill_u_matrix(u_matrix, &params);
 
-    int iterations = 0;
-//    iterations = sequential_poisson(u_matrix, f_matrix);
-//    iterations = parallel_string_poisson(u_matrix, f_matrix);
-    iterations = wave_chunk_poisson(u_matrix, f_matrix);
+    int iterations;
+    switch (params.algo) {
+        case Sequential:
+            printf("run sequential algorithm\n");
+            iterations = sequential_poisson(u_matrix, f_matrix, &params);
+            break;
+        case ParallelString:
+            printf("run parallel string algorithm\n");
+            iterations = parallel_string_poisson(u_matrix, f_matrix, &params);
+            break;
+        case WaveChunk:
+            printf("run wave chunk algorithm\n");
+            iterations = wave_chunk_poisson(u_matrix, f_matrix, &params);
+            break;
+        default:
+            error("Invalid algo was given\n");
+            rc = -EINVAL;
+            goto clean;
+    }
     if (iterations < 0) { //if iterations < 0 it's the error code of poisson
         rc = iterations;
         goto clean;
     } else {
-        printf("%d", iterations);
+        printf("iterations: %d\n", iterations);
     }
 
-    rc = print_results(u_matrix);
+    rc = print_results(u_matrix, &params);
 
     clean:
-    free_matrix(f_matrix);
-    free_matrix(u_matrix);
+    free_matrix(f_matrix, &params);
+    free_matrix(u_matrix, &params);
     return rc;
 }
