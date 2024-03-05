@@ -1,7 +1,7 @@
 import numpy as np
 
 path_a = "result_py.txt"
-path_b = "C:/Users/kotyr/CLionProjects/it_math_1/cmake-build-debug/result.txt"
+path_b = "C:/Users/kotyr/CLionProjects/it_math/it_math_1/cmake-build-debug/result_algo=6_n=100_task=task_1.txt"
 # path_b = "C:/Users/kotyr/Downloads/LENA_FINAL_BREATH (9).txt"
 delta = 0.5
 
