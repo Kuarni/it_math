@@ -16,7 +16,7 @@ int parse_args(int argc, const char **argv, params_t **params) {
 
     //init values
     name = "task_1";
-    *params_init = (params_t) {NULL, 100, 51, 0.0001, 0, {0, 1}, 6, 0xEBAC0C, 100, -100};
+    *params_init = (params_t) {NULL, 100, 51, 0.0001, 0, {0, 1}, 6, 0xEBAC0C, 100, -100, false};
     int algo = -1;
 
     const char *const usage[] = {
@@ -37,6 +37,7 @@ int parse_args(int argc, const char **argv, params_t **params) {
             OPT_INTEGER('s', "seed", &params_init->random_seed, "random seed"),
             OPT_INTEGER('\0', "max", &algo, "random max"),
             OPT_INTEGER('\0', "min", &algo, "random min"),
+            OPT_BOOLEAN('\0', "time-only", &params_init->time_only, "print only time of algo execution in seconds"),
             OPT_END()
     };
 
@@ -279,15 +280,18 @@ int main(int argc, const char **argv) {
     int iterations;
     switch (params->algo) {
         case Sequential:
-            printf("run sequential algorithm\n");
+            if (!params->time_only)
+                printf("run sequential algorithm\n");
             iterations = sequential_poisson(u_matrix, f_matrix, params);
             break;
         case ParallelString:
-            printf("run parallel string algorithm\n");
+            if (!params->time_only)
+                printf("run parallel string algorithm\n");
             iterations = parallel_string_poisson(u_matrix, f_matrix, params);
             break;
         case WaveChunk:
-            printf("run wave chunk algorithm\n");
+            if (!params->time_only)
+                printf("run wave chunk algorithm\n");
             iterations = wave_chunk_poisson(u_matrix, f_matrix, params);
             break;
         default:
@@ -300,8 +304,12 @@ int main(int argc, const char **argv) {
         goto clean;
     } else {
         t2 = omp_get_wtime();
-        printf("iterations: %d\n", iterations);
-        printf("time: %f\n", t2 - t1);
+        if (!params->time_only) {
+            printf("iterations: %d\n", iterations);
+            printf("time: %fs\n", t2 - t1);
+        } else {
+            printf("%f\n", t2 - t1);
+        }
     }
 
     rc = print_results(u_matrix, params);

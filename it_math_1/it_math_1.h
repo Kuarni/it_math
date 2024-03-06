@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
 #include <omp.h>
 #include <inttypes.h>
 #include "argparse.h"
@@ -41,6 +42,7 @@ typedef struct {
     int random_seed;
     int random_max;
     int random_min;
+    bool time_only;
 } params_t;
 
 #endif //POISSON_IT_MATH_1_H
