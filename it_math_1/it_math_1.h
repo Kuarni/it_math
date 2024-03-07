@@ -15,7 +15,9 @@
 #define OUTPUT_FILE_PREFIX "./result"
 #define OUTPUT_FILE_POSTFIX ".txt"
 #define OUTPUT_FILE_MAX_SIZE 1000
+#define DEBUG false
 #define error(...) fprintf(stderr, __VA_ARGS__)
+#define debug_print(...) if (DEBUG) printf(__VA_ARGS__)
 
 #define min(a, b) a < b ? a : b
 

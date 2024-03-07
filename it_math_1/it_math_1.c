@@ -18,6 +18,7 @@ int parse_args(int argc, const char **argv, params_t **params) {
     name = "task_1";
     *params_init = (params_t) {NULL, 100, 51, 0.0001, 0, {0, 1}, 6, 0xEBAC0C, 100, -100, false};
     int algo = -1;
+    int max_threads = 0;
 
     const char *const usage[] = {
             "poisson [options]",
@@ -38,6 +39,7 @@ int parse_args(int argc, const char **argv, params_t **params) {
             OPT_INTEGER('\0', "max", &algo, "random max"),
             OPT_INTEGER('\0', "min", &algo, "random min"),
             OPT_BOOLEAN('\0', "time-only", &params_init->time_only, "print only time of algo execution in seconds"),
+            OPT_INTEGER('j', "max-threads", &max_threads, "max number of threads for parallel algos"),
             OPT_END()
     };
 
@@ -56,6 +58,12 @@ int parse_args(int argc, const char **argv, params_t **params) {
         error("Cannot find given task\n");
         return -EINVAL;
     }
+
+    if (max_threads) {
+        omp_set_dynamic(0);
+        omp_set_num_threads(max_threads);
+    }
+    debug_print("Max threads %d\n", omp_get_max_threads());
 
     return 0;
 }
@@ -81,13 +89,13 @@ void fill_u_matrix(double **matrix, const params_t *params) {
             double y = params->borders.left + (j / (double) (params->n + 1));
             double new_val;
             if (y == params->borders.left)
-                new_val = params->task->bottom(x);
+                new_val = params->task->bottom(x, y);
             else if (x == params->borders.left)
-                new_val = params->task->left(y);
+                new_val = params->task->left(x, y);
             else if (y == params->borders.right)
-                new_val = params->task->upper(x);
+                new_val = params->task->upper(x, y);
             else if (x == params->borders.right)
-                new_val = params->task->right(y);
+                new_val = params->task->right(x, y);
             else new_val = randfrom(params->random_min, params->random_max);
             matrix[i][j] = new_val;
         }
@@ -121,6 +129,7 @@ int parallel_string_poisson(double **u, double **f, const params_t *params) { //
         dmax = 0;
 #pragma omp parallel for shared(u, dmax) private(i, j, temp, d, dm)
         for (i = 1; i < params->n + 1; i++) {
+            debug_print("Thread %d started\n", omp_get_thread_num());
             dm = 0;
             for (j = 1; j < params->n + 1; j++) {
                 temp = u[i][j];
@@ -179,6 +188,7 @@ int wave_chunk_poisson(double **u, double **f, const params_t *params) { //11.6
             dm[nx] = 0;
 #pragma omp parallel for shared(nx) private(i, j)
             for (i = 0; i < nx + 1; i++) {
+                debug_print("Thread %d started in wave's run up\n", omp_get_thread_num());
                 j = nx - i;
                 d = process_chunk(u, f, (chunk_t) {i, j}, params);
                 if (dm[i] < d) dm[i] = d;
@@ -187,13 +197,15 @@ int wave_chunk_poisson(double **u, double **f, const params_t *params) { //11.6
         for (nx = nb - 1; nx > 0; nx--) {
 #pragma omp parallel for shared(nx) private(i, j)
             for (i = nb - nx; i < nb; i++) {
+                debug_print("Thread %d started in wave's run down\n", omp_get_thread_num());
                 j = 2 * (nb - 1) - nx - i + 1;
                 d = process_chunk(u, f, (chunk_t) {i, j}, params);
                 if (dm[i] < d) dm[i] = d;
             }
         }
-#pragma omp parallel for shared(n, dm, dmax) private(i, d)
+#pragma omp parallel for shared(dm, dmax) private(i, d)
         for (i = 0; i < nb; i += dmax_chunk) {
+                debug_print("Thread %d started in dmax finding\n", omp_get_thread_num());
             d = 0;
             for (j = i; j < i + dmax_chunk; j++)
                 if (d < dm[j]) d = dm[j];

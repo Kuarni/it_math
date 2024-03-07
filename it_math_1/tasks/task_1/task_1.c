@@ -4,19 +4,19 @@ static int f_task_1(double **matrix, int n) {
     return 0;
 }
 
-static double bottom_1(double x) {
+static double bottom_1(double x, double y) {
     return 100 - 200 * x;
 }
 
-static double left_1(double y) {
+static double left_1(double x, double y) {
     return 100 - 200 * y;
 }
 
-static double upper_1(double x) {
+static double upper_1(double x, double y) {
     return -100 + 200 * x;
 }
 
-static double right_1(double y) {
+static double right_1(double x, double y) {
     return -100 + 200 * y;
 }
 
