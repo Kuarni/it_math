@@ -1,8 +1,9 @@
 #include "tasks.h"
 #include "task_1/task_1.c"
+#include "task_2/task_2.c"
 
 //add new task here
-const task_t tasks[] = {task_1};
+const task_t tasks[] = {task_1, task_2};
 
 int find_task(const char *name, task_t **task_pointer) {
     for (int i = 0; i < sizeof(tasks); i++) {
