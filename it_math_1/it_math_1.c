@@ -136,7 +136,7 @@ int parallel_string_poisson(double **u, double **f, const params_t *params) { //
     double dmax, temp, dm, d, h = params->h;
     do {
         dmax = 0;
-#pragma omp parallel for shared(u, dmax) private(i, j, temp, d, dm)
+#pragma omp parallel for shared(u, dmax, f, params, dmax_lock, h) private(i, j, temp, d, dm) default(none)
         for (i = 1; i < params->n + 1; i++) {
             debug_print("Thread %d started\n", omp_get_thread_num());
             dm = 0;
@@ -195,7 +195,7 @@ int wave_chunk_poisson(double **u, double **f, const params_t *params) { //11.6
         dmax = 0;
         for (nx = 0; nx < nb; nx++) {
             dm[nx] = 0;
-#pragma omp parallel for shared(nx) private(i, j)
+#pragma omp parallel for shared(nx, u, f, params, dm) private(i, j, d) default(none)
             for (i = 0; i < nx + 1; i++) {
                 debug_print("Thread %d started in wave's run up\n", omp_get_thread_num());
                 j = nx - i;
@@ -204,7 +204,7 @@ int wave_chunk_poisson(double **u, double **f, const params_t *params) { //11.6
             }
         }
         for (nx = nb - 1; nx > 0; nx--) {
-#pragma omp parallel for shared(nx) private(i, j)
+#pragma omp parallel for shared(nx, u, f, params, dm, nb) private(i, j, d) default(none)
             for (i = nb - nx; i < nb; i++) {
                 debug_print("Thread %d started in wave's run down\n", omp_get_thread_num());
                 j = 2 * (nb - 1) - nx - i + 1;
@@ -212,7 +212,7 @@ int wave_chunk_poisson(double **u, double **f, const params_t *params) { //11.6
                 if (dm[i] < d) dm[i] = d;
             }
         }
-#pragma omp parallel for shared(dm, dmax) private(i, d)
+#pragma omp parallel for shared(dm, dmax, nb, dmax_lock, dmax_chunk) private(i, j, d) default(none)
         for (i = 0; i < nb; i += dmax_chunk) {
             debug_print("Thread %d started in dmax finding\n", omp_get_thread_num());
             d = 0;
@@ -239,6 +239,8 @@ int print_results(double **matrix, const params_t *params) {
     if (!output_file) {
         return -EIO;
     }
+    if (!params->time_only)
+        printf("Result will be writen to file '%s'\n", output_path);
 
     for (int i = 0; i < params->n + 2; i++) {
         for (int j = 0; j < params->n + 2; j++) {
@@ -264,7 +266,7 @@ void free_matrix(double **matrix, const params_t *params) {
 }
 
 int main(int argc, const char **argv) {
-    int rc = 0;
+    int rc;
     params_t *params = NULL;
     double **f_matrix = NULL;
     double **u_matrix = NULL;
