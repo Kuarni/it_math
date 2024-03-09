@@ -82,6 +82,15 @@ int allocate_empty_matrix(double ***new_matrix, const params_t *params) {
     return 0;
 }
 
+void fill_f_matrix(double **matrix, const params_t *params) {
+    for (int i = 0; i < params->n + 2; i++)
+        for (int j = 0; j < params->n + 2; j++) {
+            double x = params->borders.left + (i / (double) (params->n + 1));
+            double y = params->borders.left + (j / (double) (params->n + 1));
+            matrix[i][j] = params->task->f(x, y);
+        }
+}
+
 void fill_u_matrix(double **matrix, const params_t *params) {
     for (int i = 0; i < params->n + 2; i++)
         for (int j = 0; j < params->n + 2; j++) {
@@ -272,11 +281,7 @@ int main(int argc, const char **argv) {
         goto clean;
     }
 
-    rc = params->task->f(f_matrix, (int) params->n);
-    if (rc) {
-        error("Error in the f function of task: \"%s\"", params->task->name);
-        goto clean;
-    }
+    fill_f_matrix(f_matrix, params);
 
     if (allocate_empty_matrix(&u_matrix, params)) {
         rc = -ENOMEM;

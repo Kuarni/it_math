@@ -11,7 +11,7 @@ typedef struct {
     char *name;
 
     //given function
-    int (*f)(double **matrix, int n);
+    double (*f)(double x, double y);
 
     //boundaries for sought function (u)
     double (*bottom)(double x, double y);

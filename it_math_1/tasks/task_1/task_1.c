@@ -1,7 +1,7 @@
 #include "../tasks.h"
 
-static int f_task_1(double **matrix, int n) {
-    return 0;
+static double f_task_1(double x, double y) {
+    return 0.0;
 }
 
 static double bottom_1(double x, double y) {
