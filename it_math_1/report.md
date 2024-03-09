@@ -124,7 +124,21 @@ t(process\_chunk) * \mathoperator{ceil}(CHUNK\_NUM/n) + C_2 * CHUNK\_NUM), \ C_2
 
 Результат при n=100:
 
-![Результат при n=100](img/u_graph.png)
+![Результат при n=100](tasks/task_1/u_graph.png)
 </details>
 
 Результаты и сравнения с теоретическими можно увидеть [тут](https://docs.google.com/spreadsheets/d/1jxdAneSE_nq_82XzDoQFgnv49XIwvKHlEUJbJJ0U0bY/edit?usp=sharing#gid=676081853) 
+
+### Задача 2
+<details>
+<summary>Вид задачи</summary>
+Задача:
+
+![Задача 2](tasks/task_2/func.png)
+
+Результат при n=100:
+
+![Результат при n=100](tasks/task_2/u_graph.png)
+</details>
+
+Результаты и сравнения с теоретическими можно увидеть [тут](https://docs.google.com/spreadsheets/d/1jxdAneSE_nq_82XzDoQFgnv49XIwvKHlEUJbJJ0U0bY/edit?usp=sharing#gid=1264000672) 
