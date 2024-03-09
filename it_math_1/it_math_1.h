@@ -33,12 +33,12 @@ typedef struct {
     uint32_t n;
     //size of side of WaveChunk algo's chunk
     uint32_t chunk_size;
-    double epsilon;
+    float epsilon;
     //interval between values
     double h;
     struct borders {
-        double left;
-        double right;
+        float left;
+        float right;
     } borders;
     enum algo algo;
     int random_seed;

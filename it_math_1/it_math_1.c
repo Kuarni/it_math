@@ -16,7 +16,7 @@ int parse_args(int argc, const char **argv, params_t **params) {
 
     //init values
     name = "task_1";
-    *params_init = (params_t) {NULL, 100, 51, 0.0001, 0, {0, 1}, 6, 0xEBAC0C, 100, -100, false};
+    *params_init = (params_t) {NULL, 100, 51, 0.0001f, 0, {0, 1}, 6, 0xEBAC0C, 100, -100, false};
     int algo = -1;
     int max_threads = 0;
 
@@ -52,7 +52,7 @@ int parse_args(int argc, const char **argv, params_t **params) {
     if (algo >= 0) {
         params_init->algo = algo;
     }
-    params_init->h = fabs(params_init->borders.right - params_init->borders.left) / (params_init->n + 1);
+    params_init->h = fabsf(params_init->borders.right - params_init->borders.left) / ((float) params_init->n + 1);
 
     if (find_task(name, &(params_init->task))) {
         error("Cannot find given task\n");
