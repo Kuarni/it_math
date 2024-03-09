@@ -205,7 +205,7 @@ int wave_chunk_poisson(double **u, double **f, const params_t *params) { //11.6
         }
 #pragma omp parallel for shared(dm, dmax) private(i, d)
         for (i = 0; i < nb; i += dmax_chunk) {
-                debug_print("Thread %d started in dmax finding\n", omp_get_thread_num());
+            debug_print("Thread %d started in dmax finding\n", omp_get_thread_num());
             d = 0;
             for (j = i; j < i + dmax_chunk; j++)
                 if (d < dm[j]) d = dm[j];
@@ -228,7 +228,6 @@ int print_results(double **matrix, const params_t *params) {
     }
     FILE *output_file = fopen(output_path, "w");
     if (!output_file) {
-
         return -EIO;
     }
 
