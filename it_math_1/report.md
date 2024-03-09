@@ -7,30 +7,30 @@
 Введем следующие обозначения:
 
 - $`N`$ - размер стороны сетки не включая границы
-- $`CHUNK\_SIZE`$ - размер чанка ($`(N+2)%CHUNK\_SIZE == 0`$)
+- $`CHUNK\_SIZE`$ - размер чанка
 - $`t(x)`$ - время выполнения в условных единицах
 - $`t_n(x)`$ - время выполнения в условных единицах на $`n`$ потоках
 - $`iter`$ - количество итераций внешнего цикла внутри алгоритма
-- $`\operatorname{ceil}(x)`$ - округление $`x`$ в большую сторону
-- $`CHUNK\_NUM = (N+2) / CHUNK\_SIZE`$ - размер стороны сетки в чанках
+- $`ceil(x)`$ - округление $`x`$ в большую сторону
+- $`CHUNK\_NUM = ceil((N+2) / CHUNK\_SIZE)`$ - размер стороны сетки в чанках
 
 Время для алгоритма 11.1 (без параллельности)  
 $`t(process) \approx iter*(N^2 * C_1), \ C_1 \in R`$
 
 Время для алгоритма 11.3 (параллельность по строкам)  
 $`t_1(process) \approx iter*(N^2 * C_1 + N * C_2), \ C_1, C_2 \in R`$
-$`t_n(process) \approx iter*(\operatorname{ceil}(N/n)* N * C_1 + N * C_2), \ C_1, C_2 \in \R`$
+$`t_n(process) \approx iter*(ceil(N/n)* N * C_1 + N * C_2), \ C_1, C_2 \in \R`$
 
 Время на один чанк 11.6:  
 $`t(process\_chunk) \approx CHUNK\_SIZE^2 * C_1, \ C_1 \in R`$  
 Время на одном потоке 11.6:  
 $`t_1(process) = iter*(t(process\_chunk)*CHUNK\_NUM^2 + C_2 * CHUNK\_NUM), \ C_2 \in R`$
 $`t_1(process) = iter*(\underbrace{\displaystyle\sum_{i = 1}^{CHUNK\_NUM}
-t(process\_chunk) * \operatorname{ceil}(i/n)}_{\text{Подъем волны}} +
+t(process\_chunk) * ceil(i/n)}_{\text{Подъем волны}} +
 \underbrace{\displaystyle\sum_{i = 1}^{CHUNK\_NUM - 1} t(process\_chunk) * 
-\operatorname{ceil}(i/n)}_{\text{Спад волны}} + C_2 * CHUNK\_NUM) = `$  
+ceil(i/n)}_{\text{Спад волны}} + C_2 * CHUNK\_NUM) = `$  
 $`= iter*(2 * t(process\_chunk) * \displaystyle\sum_{i = 1}^{CHUNK\_NUM - 1} ceil(i/n) +
-t(process\_chunk) * \operatorname{ceil}(CHUNK\_NUM/n) + C_2 * CHUNK\_NUM), \ C_2 \in R`$
+t(process\_chunk) * ceil(CHUNK\_NUM/n) + C_2 * CHUNK\_NUM), \ C_2 \in R`$
 
 Подсчеты можно увидеть
 в [таблице](https://docs.google.com/spreadsheets/d/1jxdAneSE_nq_82XzDoQFgnv49XIwvKHlEUJbJJ0U0bY/edit?usp=sharing)
