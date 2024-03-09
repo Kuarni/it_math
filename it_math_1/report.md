@@ -19,7 +19,7 @@ $`t(process) \approx iter*(N^2 * C_1), \ C_1 \in R`$
 
 Время для алгоритма 11.3 (параллельность по строкам)  
 $`t_1(process) \approx iter*(N^2 * C_1 + N * C_2), \ C_1, C_2 \in R`$
-$`t_n(process) \approx iter*(ceil(N/n)* N * C_1 + N * C_2), \ C_1, C_2 \in \R`$
+$`t_n(process) \approx iter*(ceil(N/n)* N * C_1 + N * C_2), \ C_1, C_2 \in R`$
 
 Время на один чанк 11.6:  
 $`t(process\_chunk) \approx CHUNK\_SIZE^2 * C_1, \ C_1 \in R`$  
