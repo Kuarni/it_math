@@ -16,7 +16,7 @@ int parse_args(int argc, const char **argv, params_t **params) {
 
     //init values
     name = "task_1";
-    *params_init = (params_t) {NULL, 100, 51, 0.0001f, 0, {0, 1}, 6, 0xEBAC0C, 100, -100, false};
+    *params_init = (params_t) {NULL, 100, 20, 0.0001f, 0, {0, 1}, 6, 0xEBAC0C, 100, -100, false};
     int algo = -1;
     int max_threads = 0;
 
@@ -164,12 +164,8 @@ typedef struct {
 double process_chunk(double **u, double **f, chunk_t chunk, const params_t *params) {
     double dmax, temp, dm, h = params->h;
     dmax = 0;
-    for (uint32_t i = chunk.x * params->chunk_size; i < (chunk.x + 1) * params->chunk_size; i++) {
-        if (i == 0 || i == params->n + 1)
-            continue;
-        for (uint32_t j = chunk.y * params->chunk_size; j < (chunk.y + 1) * params->chunk_size; j++) {
-            if (j == 0 || j == params->n + 1)
-                continue;
+    for (uint32_t i = max(chunk.x * params->chunk_size, 1); i < min((chunk.x + 1) * params->chunk_size, params->n+1); i++) {
+        for (uint32_t j = max(chunk.y * params->chunk_size, 1); j < min((chunk.y + 1) * params->chunk_size, params->n+1); j++) {
             temp = u[i][j];
             u[i][j] = 0.25 * (u[i - 1][j] + u[i + 1][j] + u[i][j - 1] + u[i][j + 1] - h * h * f[i][j]);
             dm = fabs(temp - u[i][j]);
@@ -181,11 +177,7 @@ double process_chunk(double **u, double **f, chunk_t chunk, const params_t *para
 }
 
 int wave_chunk_poisson(double **u, double **f, const params_t *params) { //11.6
-    if ((params->n + 2) % params->chunk_size) {
-        error("Invalid chunk size: %d\n", params->chunk_size);
-        return -EINVAL;
-    }
-    const uint32_t nb = (params->n + 2) / params->chunk_size;
+    const uint32_t nb = ceil(params->n + 2, params->chunk_size);
     omp_lock_t dmax_lock;
     omp_init_lock(&dmax_lock);
     uint32_t nx, i, j, iterations = 0;

@@ -19,7 +19,9 @@
 #define error(...) fprintf(stderr, __VA_ARGS__)
 #define debug_print(...) if (DEBUG) printf(__VA_ARGS__)
 
-#define min(a, b) a < b ? a : b
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define ceil(a, b) (((a) / (b)) + ((bool) ((a) % (b))))
 
 enum algo {
     Sequential = 1,
