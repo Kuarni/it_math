@@ -6,9 +6,7 @@ from typing import NamedTuple
 import numpy as np
 from PIL import Image
 
-from src.lib import Transformer
-from src.lib.Packing import Packing
-from src.lib.SVD import SVD
+from .PowerMethodSVD import PowerMethodSVD
 from .Transformer import Transformer
 from .SVD import SVD
 from .Packing import Packing
@@ -30,8 +28,8 @@ class SKUF:
     __img_metadata: Packing = Packing(None, f"<II{__str_byte_sizes}s{__str_byte_sizes}sI")
     __supported_formats = ["BMP"]
     __supported_algos = {
-        "SVD": SVD
         "SVD": SVD,
+        "pwmSVD": PowerMethodSVD
     }
 
     def __init__(self, file_path: str, encoder: Transformer = None):
