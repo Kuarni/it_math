@@ -1,7 +1,6 @@
 from argparse import *
 from SKUFlib.SKUF import SKUF
-from SKUFlib.SVD import SVD
-from SKUFlib.PowerMethodSVD import PowerMethodSVD
+from SKUFlib.SVD import NpSVD, PowerMethodSVD
 
 if __name__ == '__main__':
     parser = ArgumentParser(
@@ -17,7 +16,7 @@ if __name__ == '__main__':
             output = args.input.rsplit('.')[0] + '.scuf'
         print("result will be saved in", output)
         algos = {
-            "pySVD": SVD(compression_degree=args.compression_degree),
+            "npSVD": NpSVD(compression_degree=args.compression_degree),
             "pwmSVD": PowerMethodSVD(compression_degree=args.compression_degree),
         }
         if args.algorithm not in algos:
@@ -27,11 +26,11 @@ if __name__ == '__main__':
 
 
     p = subparsers.add_parser('compress', help="compress image to skuf file by SVD algo")
-    p.add_argument('-i', "--input", help="the input file to compress", type=str, required=True)
+    p.add_argument("input", metavar="Input", help="the input image file to compress", type=str)
     p.add_argument('-o', "--output", help="the output skuf file", type=str, required=False)
     p.add_argument('-a', "--algorithm",
-                   help="compression SVD algorithm, there are pySVD (np linalg SVD), pwmSVD (power method SVD)",
-                   type=str, required=False, default="pySVD")
+                   help="compression SVD algorithm, there are npSVD (numpy linalg SVD), pwmSVD (power method SVD)",
+                   type=str, required=False, default="npSVD")
     p.add_argument('-c', "--compression-degree", help="compression degree", type=float, required=False, default=2)
     p.set_defaults(func=compress)
 
@@ -45,9 +44,9 @@ if __name__ == '__main__':
 
 
     p = subparsers.add_parser('decompress', help="decompress image from skuf file")
-    p.add_argument('-i', "--input", help="the input scuf file to decompress", type=str, required=True)
+    p.add_argument("input", metavar="Input", help="the input scuf file to decompress", type=str)
     p.add_argument('-o', "--output", help="the output decompress image path", type=str, required=False)
     p.set_defaults(func=decompress)
 
-    args = parser.parse_args()
-    args.func(args)
+    parse_res = parser.parse_args()
+    parse_res.func(parse_res)

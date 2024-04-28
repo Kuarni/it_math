@@ -1,19 +1,17 @@
 from copy import deepcopy
-from io import BufferedReader
 from struct import pack, unpack, calcsize
-from typing import NamedTuple
+from typing import NamedTuple, BinaryIO
 
 import numpy as np
 from PIL import Image
 
-from .PowerMethodSVD import PowerMethodSVD
 from .Transformer import Transformer
-from .SVD import SVD
+from .SVD import NpSVD, PowerMethodSVD
 from .Packing import Packing
 
 
 class SKUF:
-    """SmallKnowledgeUnifiedFormat"""
+    """Small Knowledge Unified Format"""
 
     class __ImgMetadata(NamedTuple):
         size_x: int
@@ -28,7 +26,7 @@ class SKUF:
     __img_metadata: Packing = Packing(None, f"<II{__str_byte_sizes}s{__str_byte_sizes}sI")
     __supported_formats = ["BMP"]
     __supported_algos = {
-        "SVD": SVD,
+        "npSVD": NpSVD,
         "pwmSVD": PowerMethodSVD
     }
 
@@ -56,7 +54,7 @@ class SKUF:
 
     def encode(self, img, encoder: Transformer):
         if encoder is None:
-            encoder = self.__supported_algos["SVD"]()
+            encoder = self.__supported_algos["npSVD"]()
         if encoder.name not in self.__supported_algos:
             raise ValueError(
                 f"Unsupported encoder type {encoder.name}\nList of supported encoders: {self.__supported_algos.keys()}")
@@ -81,7 +79,7 @@ class SKUF:
         img[:, :, 2] = self.__skuf_b.decode()
         return Image.fromarray(img)
 
-    def load(self, file: BufferedReader, offset=0):
+    def load(self, file: BinaryIO, offset=0):
         file.seek(offset)
         name = unpack(self.__magic.packing, file.read(calcsize(self.__magic.packing)))[0]
         if name != self.__magic.value:

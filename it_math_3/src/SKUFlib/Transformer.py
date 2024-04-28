@@ -1,7 +1,7 @@
 from abc import abstractmethod
-from io import BufferedReader
+from typing import BinaryIO
 
-import PIL
+import PIL.Image
 
 
 class Transformer:
@@ -24,5 +24,5 @@ class Transformer:
         pass
 
     @abstractmethod
-    def read(self, f: BufferedReader):
+    def read(self, f: BinaryIO):
         pass
