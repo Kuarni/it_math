@@ -1,4 +1,3 @@
-import typing
 from copy import deepcopy
 from io import BufferedReader
 from struct import pack, unpack, calcsize
@@ -10,6 +9,9 @@ from PIL import Image
 from src.lib import Transformer
 from src.lib.Packing import Packing
 from src.lib.SVD import SVD
+from .Transformer import Transformer
+from .SVD import SVD
+from .Packing import Packing
 
 
 class SKUF:
@@ -23,12 +25,13 @@ class SKUF:
         size_of_one_color_data: int
 
     __str_byte_sizes = 8
-    __name: Packing = Packing(b'skuf', "<4s")
+    __magic: Packing = Packing(b'skuf', "<4s")
     __version: Packing = Packing(1, "<b")
     __img_metadata: Packing = Packing(None, f"<II{__str_byte_sizes}s{__str_byte_sizes}sI")
     __supported_formats = ["BMP"]
     __supported_algos = {
         "SVD": SVD
+        "SVD": SVD,
     }
 
     def __init__(self, file_path: str, encoder: Transformer = None):
@@ -40,7 +43,7 @@ class SKUF:
         self.__skuf_b = None
         with open(file_path, "rb") as f:
             print()
-            if unpack(self.__name.packing, f.read(calcsize(self.__name.packing)))[0] == self.__name.value:
+            if unpack(self.__magic.packing, f.read(calcsize(self.__magic.packing)))[0] == self.__magic.value:
                 self.load(f)
             else:
                 self.encode(Image.open(file_path), encoder)
@@ -82,8 +85,8 @@ class SKUF:
 
     def load(self, file: BufferedReader, offset=0):
         file.seek(offset)
-        name = unpack(self.__name.packing, file.read(calcsize(self.__name.packing)))[0]
-        if name != self.__name.value:
+        name = unpack(self.__magic.packing, file.read(calcsize(self.__magic.packing)))[0]
+        if name != self.__magic.value:
             raise ValueError("Not a skuf file was given")
         version = unpack(self.__version.packing, file.read(calcsize(self.__version.packing)))[0]
         if version != self.__version.value:
@@ -102,7 +105,7 @@ class SKUF:
 
     def save(self, file_path: str):
         with open(file_path, 'wb') as file:
-            file.write(pack(self.__name.packing, self.__name.value))
+            file.write(pack(self.__magic.packing, self.__magic.value))
             file.write(pack(self.__version.packing, self.__version.value))
             file.write(pack(self.__img_metadata.packing, *self.__img_metadata.value))
             file.write(self.__skuf_r.to_bytes())
