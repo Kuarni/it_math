@@ -11,6 +11,11 @@ class PowerMethodSVD(SVD):
     name = "pwmSVD"
 
     def __init__(self, compression_degree=2, max_iter=0, tolerance=1e-2, start_vector_seed=0xebac0c):
+        """
+        :param max_iter: maximum number of iterations for 1d vector computation. If <= 0 when there is no limits
+        :param tolerance: for 1d vector computation.
+        :param start_vector_seed: seed for random number generator for 1d vector init.
+        """
         self.max_iter = max_iter
         self.tolerance = tolerance
         np.random.seed(start_vector_seed)
