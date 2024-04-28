@@ -12,7 +12,7 @@ from .Transformer import Transformer
 class SVD(Transformer):
     name = "SVD"
 
-    def __init__(self, compression_degree=2):
+    def __init__(self, compression_degree: int = 2):
         self._u = None
         self._v = None
         self._s = None

@@ -1,6 +1,3 @@
-import time
-from random import normalvariate
-
 import numpy as np
 from PIL import Image
 
@@ -47,7 +44,6 @@ class PowerMethodSVD(SVD):
         svd_so_far = []
 
         for i in range(k):
-            start = time.time()
             matrix_for_1d = matrix.copy()
 
             for u, singular_value, v in svd_so_far:
@@ -59,10 +55,8 @@ class PowerMethodSVD(SVD):
             u = u_unnormalized / sigma
 
             svd_so_far.append((u, sigma, v))
-            print(time.time() - start, i)
 
         us, singular_value, vs = [np.array(x) for x in zip(*svd_so_far)]
-
         return us.T, singular_value, vs
 
     def encode(self, image: Image):
