@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 
 from .Transformer import Transformer
-from .SVD import NpSVD, PowerMethodSVD
+from .SVD import NpSVD, PowerMethodSVD, BlockPowerMethodSVD
 from .Packing import Packing
 
 
@@ -24,21 +24,21 @@ class SKUF:
     __magic: Packing = Packing(b'skuf', "<4s")
     __version: Packing = Packing(1, "<b")
     __img_metadata: Packing = Packing(None, f"<II{__str_byte_sizes}s{__str_byte_sizes}sI")
-    __supported_formats = ["BMP"]
-    __supported_algos = {
-        "npSVD": NpSVD,
-        "pwmSVD": PowerMethodSVD
+    supported_formats = ["BMP"]
+    supported_algos = {
+        NpSVD.name: NpSVD,
+        PowerMethodSVD.name: PowerMethodSVD,
+        BlockPowerMethodSVD.name: BlockPowerMethodSVD
     }
 
     def __init__(self, file_path: str, encoder: Transformer = None):
         """Load scuf or compress given image to scuf via encoder"""
-        self.__supported_formats_b = map(self.__str_to_bytes, self.__supported_formats)
-        self.__supported_algos_b = {self.__str_to_bytes(k): v for k, v in self.__supported_algos.items()}
+        self.__supported_formats_b = map(self.__str_to_bytes, self.supported_formats)
+        self.__supported_algos_b = {self.__str_to_bytes(k): v for k, v in self.supported_algos.items()}
         self.__skuf_r = None
         self.__skuf_g = None
         self.__skuf_b = None
         with open(file_path, "rb") as f:
-            print()
             if unpack(self.__magic.packing, f.read(calcsize(self.__magic.packing)))[0] == self.__magic.value:
                 self.load(f)
             else:
@@ -54,13 +54,13 @@ class SKUF:
 
     def encode(self, img, encoder: Transformer):
         if encoder is None:
-            encoder = self.__supported_algos["npSVD"]()
-        if encoder.name not in self.__supported_algos:
+            encoder = self.supported_algos["npSVD"]()
+        if encoder.name not in self.supported_algos:
             raise ValueError(
-                f"Unsupported encoder type {encoder.name}\nList of supported encoders: {self.__supported_algos.keys()}")
-        if img.format not in self.__supported_formats:
+                f"Unsupported encoder type {encoder.name}\nList of supported encoders: {self.supported_algos.keys()}")
+        if img.format not in self.supported_formats:
             raise ValueError(
-                f"Unsupported image format \"{img.format}\"\nList of supported formats: {self.__supported_formats}")
+                f"Unsupported image format \"{img.format}\"\nList of supported formats: {self.supported_formats}")
 
         r, g, b = img.split()
         self.__skuf_r = deepcopy(encoder).encode(r)

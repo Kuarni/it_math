@@ -1,5 +1,5 @@
 import math
-from abc import ABC
+from abc import ABC, abstractmethod
 from struct import pack, unpack, calcsize
 from typing import BinaryIO
 
@@ -26,7 +26,7 @@ class SVD(Transformer, ABC):
         return calcsize(self._matrices_sizes.packing) + self._u.nbytes + self._s.nbytes + self._v.nbytes
 
     def decode(self):
-        return np.dot(np.dot(self._u, np.diag(self._s)), self._v).astype(np.uint8)
+        return np.clip(np.dot(np.dot(self._u, np.diag(self._s)), self._v), 0, 255).astype(np.uint8)
 
     _matrices_sizes: Packing = Packing(None, "<III")
 
@@ -46,23 +46,31 @@ class SVD(Transformer, ABC):
         self._matrices_sizes.value = (n, k, m)
         return self
 
+    @abstractmethod
+    def _algo(self, matrix):
+        pass
+
+    def encode(self, image: Image):
+        matrix = np.array(image).astype(np.float64)
+        h, w = matrix.shape
+        u, s, v = self._algo(matrix)
+        self._u = u.astype(np.float32)
+        self._s = s.astype(np.float32)
+        self._v = v.astype(np.float32)
+        self._matrices_sizes.value = (h, len(s), w)
+        return self
+
 
 class NpSVD(SVD):
     name = "npSVD"
 
-    def encode(self, image: Image):
-        matrix = np.array(image)
-        h, w = matrix.shape
-        saving_part = self._saving_part(h, w)
+    def _algo(self, matrix):
         u, s, v = np.linalg.svd(matrix, full_matrices=False)
-        self._u = u[:, :saving_part].astype(np.float32)
-        self._s = s[:saving_part].astype(np.float32)
-        self._v = v[:saving_part, :].astype(np.float32)
-        self._matrices_sizes.value = (h, saving_part, w)
-        return self
+        saving_part = self._saving_part(*matrix.shape)
+        return u[:, :saving_part], s[:saving_part], v[:saving_part, :]
 
 
-class MySVD(SVD, ABC):
+class PowSVD(SVD, ABC):
     def __init__(self, compression_degree=2, max_iter=0, tolerance=1e-2, start_vector_seed=0xebac0c):
         """
         :param max_iter: maximum number of iterations for 1d vector computation. If <= 0 when there is no limits
@@ -80,7 +88,7 @@ class MySVD(SVD, ABC):
         return unnormalized / np.linalg.norm(unnormalized)
 
 
-class PowerMethodSVD(MySVD):
+class PowerMethodSVD(PowSVD):
     name = "pwmSVD"
 
     def __svd_1d(self, matrix):
@@ -99,11 +107,11 @@ class PowerMethodSVD(MySVD):
                 break
         return current_vector
 
-    def __algo(self, matrix, k):
-        matrix = matrix.astype(np.float64)
+    def _algo(self, matrix):
+        s = self._saving_part(matrix.shape[1], matrix.shape[0])
         svd_so_far = []
 
-        for i in range(k):
+        for i in range(s):
             matrix_for_1d = matrix.copy()
 
             for u, singular_value, v in svd_so_far:
@@ -119,13 +127,22 @@ class PowerMethodSVD(MySVD):
         us, singular_value, vs = [np.array(x) for x in zip(*svd_so_far)]
         return us.T, singular_value, vs
 
-    def encode(self, image: Image):
-        matrix = np.array(image)
+
+class BlockPowerMethodSVD(PowSVD, ABC):
+    name = "bpmSVD"
+
+    def _algo(self, matrix):
         h, w = matrix.shape
-        saving_part = super()._saving_part(h, w)
-        u, s, v = self.__algo(matrix, saving_part)
-        self._u = u.astype(np.float32)
-        self._s = s.astype(np.float32)
-        self._v = v.astype(np.float32)
-        self._matrices_sizes.value = (h, saving_part, w)
-        return self
+        s = self._saving_part(h, w)
+        v = np.array([self._random_unit_vector(s) for _ in range(w)])
+        u = np.zeros((h, s))
+        sigma = np.zeros((s, s))
+        err = 10 ** 9
+        while err > self.tolerance:
+            q, r = np.linalg.qr(np.dot(matrix, v))
+            u = q[:, :s]
+            q, r = np.linalg.qr(np.dot(matrix.T, u))
+            v = q[:, :s]
+            sigma = r[:s, :s]
+            err = np.linalg.norm(np.dot(matrix, v) - np.dot(u, sigma))
+        return u, np.diag(sigma), v.T
