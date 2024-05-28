@@ -2,7 +2,7 @@
 
 ## Эксперимент
 
-Код запускался для решения уравнения $y\prime\prime - \lambda*y = -2*\lambda * sin(\sqrt{\lambda}*x)$, с граничными условиями $y(0) = 0$, $y(4 *
+Код запускался для решения уравнения $y\prime\prime - \lambda * y = -2 * \lambda * sin(\sqrt{\lambda} * x)$ , с граничными условиями $y(0) = 0$, $y(4 *
 \pi / \sqrt{\lambda}) = 0$
 Решение этого уравнения в явном виде: $y = sin(\sqrt{\lambda}*x)$. За данное уравнение
 благодарность [osogi](https://github.com/osogi).
